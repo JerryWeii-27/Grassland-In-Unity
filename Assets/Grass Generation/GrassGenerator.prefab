@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5567346877611550576
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5567346877611550580}
+  - component: {fileID: 5567346877611550582}
+  m_Layer: 0
+  m_Name: GrassGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5567346877611550580
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5567346877611550576}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5567346877611550582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5567346877611550576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b85677472c2f44bbbb03172c19b7055b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  terrainChunk: {fileID: 0}
+  marker: {fileID: 0}
+  cameraPos: {fileID: 0}
+  calcGrassPos: {fileID: 7200000, guid: d1e811d8ccef44a0d88cc978b148f8ee, type: 3}
+  cullGrassShader: {fileID: 7200000, guid: be83d2a437f954f1e8e1c3dedf85c52b, type: 3}
+  terrainXZStretch: 0
+  cullingEnabled: 1
+  grassHighLodMesh: {fileID: -7505255518394940619, guid: 0510de3068cb045eb9366ddaed26912c, type: 3}
+  grassLowLodMesh: {fileID: 2060586969691506851, guid: 69728f7a61f4743c883c6418d0e6d7a3, type: 3}
+  grassHighLodMat: {fileID: 2100000, guid: 7718098b6be3f4b03bb4e8e3e9501ec8, type: 2}
+  grassLowLodMat: {fileID: 2100000, guid: 9b60554ec865c4abc9177bb631a971ec, type: 2}
+  totalInstanceCount: 0
+  chunkSizeInMeters: 24
+  grassPerMeter: 5
+  viewDistance: 5
+  boundsSize: {x: 50000, y: 50000, z: 50000}
+  randomIndexGridCnt: 3
+  cullAccuracy: 128
+  xzDisplaceStr: 0.1
+  yDisplaceStr: 0
+  xzNoiseScale: 1.9
+  yNoiseScale: 0.2
+  camChunkPos: {x: 0, y: 0}
+  highLODDistance: 1
+  minLOD: 100
+  lodGradient: 0.5
+  lastChunk: {x: -114514, y: 54520}
+  curGrassChunk: {x: 0, y: 0}

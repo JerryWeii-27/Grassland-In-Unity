@@ -1,0 +1,63 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CullChunk
+#pragma kernel ResetArgs
+#pragma kernel AdjustLod
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+uint _totalInstanceCount;
+float4x4 MATRIX_VP;
+
+RWStructuredBuffer<uint> _argBuffer;
+RWStructuredBuffer<uint> _argBufferLowLod;
+RWStructuredBuffer<float3> _posBuffer;
+
+// Lod.
+uint _lodFactor;
+
+// Loops through all grass in chunk. If none in view, then cull the chunk.
+[numthreads(64,1,1)]
+void CullChunk (uint3 id : SV_DispatchThreadID)
+{
+    if(_argBuffer[1] == 0 && id.x < _totalInstanceCount)
+    {
+        float4 position = float4(_posBuffer[id.x].xyz, 1);
+
+        float4 viewspace = mul(MATRIX_VP, position);
+
+        float3 clipspace = viewspace.xyz;
+        clipspace /= -viewspace.w;
+
+        clipspace.x = clipspace.x / 2.0f + 0.5f;
+        clipspace.y = clipspace.y / 2.0f + 0.5f;
+        clipspace.z = -viewspace.w;
+
+        bool inView = clipspace.x < -0.1f || clipspace.x > 1.1f || clipspace.z <= -0.1f ? 0 : 1;
+        // bool withinDistance = distance(_CameraPosition, position.xyz) < _Distance;
+        if(inView)
+        {
+            _argBuffer[1] = _totalInstanceCount;
+        }
+    }
+}
+
+[numthreads(1,1,1)]
+void ResetArgs(uint3 id : SV_DispatchThreadID)
+{
+    _argBuffer[1] = 0;
+}
+
+[numthreads(1,1,1)]
+void AdjustLod(uint3 id : SV_DispatchThreadID)
+{
+    _argBufferLowLod[1] = _argBuffer[1];
+
+    if (_argBuffer[1] == 0)
+    {
+        return;
+    }
+
+    _argBuffer[1] = _totalInstanceCount / _lodFactor;
+    _argBufferLowLod[1] = _totalInstanceCount / _lodFactor;
+}

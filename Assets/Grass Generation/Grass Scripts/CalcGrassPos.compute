@@ -1,0 +1,138 @@
+#pragma kernel InitializeGrassChunk
+#pragma kernel UpdateDeltaOrigin
+
+#include "../../Noise/FastNoiseLite.hlsl"
+
+RWStructuredBuffer<float3> _grassDataBuffer;
+
+RWStructuredBuffer<float3> _terrainVerts;
+RWStructuredBuffer<int> _terrainTris;
+
+// Floating origin.
+float2 _deltaOriginNow;
+float2 _deltaOriginOld;
+
+// Terrain info.
+float2 _terrainWorldXZPos; // In world coords.
+uint _vertsPerSide;
+float _terrainChunkSideLength;
+float _quadSideLength;
+
+float _terrainXZStretch;
+float _terrainYStretch;
+
+// Grass info.
+float2 _grassChunkPos; // In world coords.
+float _chunkSizeInMeters;
+float _grassPerMeter;
+uint _grassPerSide;
+
+// Random displacement settings.
+float _yDisplaceStr;
+float _xzDisplaceStr;
+
+float _yNoiseScale;
+float _xzNoiseScale;
+
+// Random Index.
+RWStructuredBuffer<int> _randIndex;
+
+/*
+
+1. Find x and z position of grass using id.x and id.y
+2. Find the corresponding uv.x and uv.y, which tells the position of the grass on the height map.
+3. Sample height from height map using uv.
+(4. Add some noise.)
+5. Modify the grassDataBuffer, using id.x and id.y to locate the specific position of the current grass.
+
+*/
+
+[numthreads(8,8,1)]
+void InitializeGrassChunk (uint3 id : SV_DispatchThreadID)
+{
+    // _terrainXZStretch = 20.0f;
+
+    if(id.x >= _grassPerSide || id.y >= _grassPerSide)
+    {
+        return;
+    }
+
+    _terrainYStretch = 1.0f; // Always 1.
+
+    _quadSideLength = _terrainXZStretch;
+    _terrainChunkSideLength = (_vertsPerSide - 1) * _terrainXZStretch;
+
+    float2 targetWorldXZPos =
+    _grassChunkPos
+    - _chunkSizeInMeters / 2.0f
+    + float2(1.0f * id.x / _grassPerMeter, 1.0f * id.y / _grassPerMeter);
+
+    float2 relativePos = targetWorldXZPos - _terrainWorldXZPos;
+
+    float posXDisplace = _fnlSingleSimplex2D(10085, targetWorldXZPos.x * _xzNoiseScale, targetWorldXZPos.y * _xzNoiseScale) * _xzDisplaceStr;
+    float posZDisplace = _fnlSingleSimplex2D(10084, targetWorldXZPos.x * _xzNoiseScale, targetWorldXZPos.y * _xzNoiseScale) * _xzDisplaceStr;
+
+    relativePos += float2(posXDisplace, posZDisplace);
+
+    uint quadX = (uint)((1.0f * relativePos.x + _terrainChunkSideLength / 2.0f) / (float)_quadSideLength);
+    uint quadY = (uint)((- 1.0f * relativePos.y + _terrainChunkSideLength / 2.0f) / (float)_quadSideLength);
+
+    uint quadIndex = quadX * (_vertsPerSide - 1) + quadY;
+
+    uint triIndex = 2 * quadIndex;
+
+    if (relativePos.y < - relativePos.x + (1.0f * quadX - 1.0f * quadY) * _quadSideLength)
+    {
+        triIndex += 1;
+    }
+
+    // Get vertices from the triangle.
+    float3 v1 = _terrainVerts[_terrainTris[triIndex * 3 + 0]] * _terrainXZStretch;
+    float3 v2 = _terrainVerts[_terrainTris[triIndex * 3 + 1]] * _terrainXZStretch;
+    float3 v3 = _terrainVerts[_terrainTris[triIndex * 3 + 2]] * _terrainXZStretch;
+
+    // Adjust for terrain Y stretch.
+    v1.y *= _terrainYStretch / _terrainXZStretch;
+    v2.y *= _terrainYStretch / _terrainXZStretch;
+    v3.y *= _terrainYStretch / _terrainXZStretch;
+
+    // Compute the normal vector components (A, B, C) of the plane.
+    float dx1 = v2.x - v1.x;
+    float dy1 = v2.y - v1.y;
+    float dz1 = v2.z - v1.z;
+
+    float dx2 = v3.x - v1.x;
+    float dy2 = v3.y - v1.y;
+    float dz2 = v3.z - v1.z;
+    // compute the normal vector components (a, b, c).
+    float a = dy1 * dz2 - dz1 * dy2;
+    float b = dz1 * dx2 - dx1 * dz2;
+    float c = dx1 * dy2 - dy1 * dx2;
+
+    // Calculate d using vertex v1.
+    float d = - (a * v1.x + b * v1.y + c * v1.z);
+
+    // Solve for the height using a plane equation.
+    float height = - (a * relativePos.x + c * relativePos.y + d) / b;
+
+    float heightDisplace = _fnlSingleSimplex2D(10086, targetWorldXZPos.x * _yNoiseScale, targetWorldXZPos.y * _yNoiseScale) * _yDisplaceStr;
+    height += heightDisplace;
+
+    float3 pos = float3(
+        targetWorldXZPos.x + _deltaOriginNow.x + posXDisplace, 
+        height, 
+        targetWorldXZPos.y + _deltaOriginNow.y + posZDisplace
+    );
+    int index = _randIndex[id.x + id.y * _grassPerSide];
+    _grassDataBuffer[index] = pos;
+}
+
+[numthreads(8,8,1)]
+void UpdateDeltaOrigin(uint3 id : SV_DispatchThreadID)
+{
+    float3 pos = _grassDataBuffer[id.x + id.y * _grassPerSide];
+    pos.x = pos.x - _deltaOriginOld.x + _deltaOriginNow.x;
+    pos.z = pos.z - _deltaOriginOld.y + _deltaOriginNow.y;
+
+    _grassDataBuffer[id.x + id.y * _grassPerSide] = pos;
+}
